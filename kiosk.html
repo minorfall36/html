@@ -39,14 +39,14 @@
     .slide {
       position: absolute;
       top: 0;
-      left: 100vw;
+      left: 0;
       width: 100vw;
       height: 100vh;
-      display: flex;
+      display: none; /* Changed from 'flex' to 'none' */
       justify-content: center;
       align-items: center;
       opacity: 0;
-      transition: all 0.5s ease-in-out;
+      transition: opacity 0.5s ease-in-out;
     }
 
     .slide img {
@@ -63,7 +63,7 @@
     }
 
     .slide.active {
-      left: 0;
+      display: flex; /* Changed from 'left: 0' and now explicitly shows the slide */
       opacity: 1;
       z-index: 1;
     }
@@ -181,7 +181,7 @@
 
     imageFiles.forEach((src, index) => {
       const div = document.createElement('div');
-      div.className = 'slide'; // Removed 'fade-in' class to prevent initial conflict
+      div.className = 'slide';
       const img = document.createElement('img');
       img.src = src;
       img.id = `img${index}`;
@@ -208,12 +208,10 @@
     
 
     function showSlide(index) {
-      slides.forEach((slide, i) => {
+      slides.forEach((slide) => {
         slide.classList.remove('active');
-        slide.style.left = (i < index ? '-100vw' : '100vw');
       });
       slides[index].classList.add('active');
-      slides[index].style.left = '0';
 
       document.getElementById('nav-controls').style.display = 'flex';
       document.getElementById('backBtn').style.display = (index === 0 ? 'none' : 'inline-block');
