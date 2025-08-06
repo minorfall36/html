@@ -54,6 +54,13 @@
       height: 100vh;
       object-fit: contain;
     }
+    
+    .slide .placeholder {
+      font-size: 2rem;
+      color: #666;
+      text-align: center;
+      padding: 2rem;
+    }
 
     .slide.active {
       left: 0;
@@ -168,7 +175,12 @@
     let inactivityTimer;
 
     const slidesContainer = document.getElementById('slides');
-    // Corrected image URLs to use relative paths for GitHub Pages
+    if (!slidesContainer) {
+      console.error('Error: Slides container not found. Check your HTML.');
+    } else {
+      console.log('Slides container found. Proceeding with slide creation.');
+    }
+
     const imageFiles = [
       'img/page1.PNG',
       'img/page2.PNG',
@@ -181,12 +193,27 @@
       const img = document.createElement('img');
       img.src = src;
       img.id = `img${index}`;
+      // Add an onerror handler to show a placeholder if the image fails to load
+      img.onerror = function() {
+        console.error(`Error loading image: ${src}. Please check the file path and capitalization.`);
+        const placeholder = document.createElement('div');
+        placeholder.className = 'placeholder';
+        placeholder.innerText = `Image not found: ${src}\n\nCheck your 'img' folder and file name capitalization.`;
+        div.replaceChild(placeholder, img);
+      };
       div.appendChild(img);
       slidesContainer.appendChild(div);
     });
+    console.log(`Created ${imageFiles.length} slides.`);
 
     const slides = document.querySelectorAll('.slide');
-    slides[0].classList.add('active');
+    if (slides.length > 0) {
+      slides[0].classList.add('active');
+      console.log('First slide activated.');
+    } else {
+      console.error('Error: No slides found after creation. Check imageFiles array or HTML structure.');
+    }
+    
 
     function showSlide(index) {
       slides.forEach((slide, i) => {
@@ -360,25 +387,4 @@
     }, { passive: true } );
 
     document.body.addEventListener('touchmove', e => {
-      if (e.target.closest('#sig')) {
-        swipeBlocked = true;
-      }
-    }, { passive: true } );
-
-    document.body.addEventListener('touchend', e => {
-      if (swipeBlocked) return;
-      const endX = e.changedTouches[0].screenX;
-      if (startX - endX > 50) {
-        nextSlide();
-      } else if (endX - startX > 50) {
-        prevSlide();
-      }
-    });
-
-    document.addEventListener('contextmenu', event => event.preventDefault());
-
-    showSlide(currentSlide);
-    resetInactivityTimer();
-  </script>
-</body>
-</html>
+      if (e.target.closest('#sig')
