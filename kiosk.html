@@ -68,15 +68,6 @@
       z-index: 1;
     }
 
-    .fade-in {
-      animation: fadeIn 1s ease forwards;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
     .controls {
       position: absolute;
       bottom: 20px;
@@ -181,24 +172,25 @@
       console.log('Slides container found. Proceeding with slide creation.');
     }
 
+    // Using the correct file names for the user's uploaded images
     const imageFiles = [
-      'img/page1.PNG',
-      'img/page2.PNG',
-      'img/page3.PNG'
+      'uploaded:image_5ecba0.png-79952120-d830-4e01-97f6-ed49d7ff07d0',
+      'uploaded:image_5f47c3.png-a96369de-58d6-448c-a2e1-336d85f42282',
+      'uploaded:image_5f4ba1.png-d74c4ebe-aa8e-4c4c-8660-678ced81b5b3'
     ];
 
     imageFiles.forEach((src, index) => {
       const div = document.createElement('div');
-      div.className = 'slide fade-in';
+      div.className = 'slide'; // Removed 'fade-in' class to prevent initial conflict
       const img = document.createElement('img');
       img.src = src;
       img.id = `img${index}`;
       // Add an onerror handler to show a placeholder if the image fails to load
       img.onerror = function() {
-        console.error(`Error loading image: ${src}. Please check the file path and capitalization.`);
+        console.error(`Error loading image: ${src}. Please check the file path.`);
         const placeholder = document.createElement('div');
         placeholder.className = 'placeholder';
-        placeholder.innerText = `Image not found: ${src}\n\nCheck your 'img' folder and file name capitalization.`;
+        placeholder.innerText = `Image not found: ${src}\n\nCheck your file paths.`;
         div.replaceChild(placeholder, img);
       };
       div.appendChild(img);
@@ -387,4 +379,30 @@
     }, { passive: true } );
 
     document.body.addEventListener('touchmove', e => {
-      if (e.target.closest('#sig')
+      if (e.target.closest('#sig')) {
+        swipeBlocked = true;
+      }
+    }, { passive: true } );
+
+    document.body.addEventListener('touchend', e => {
+      if (swipeBlocked) return;
+      const endX = e.changedTouches[0].screenX;
+      if (startX - endX > 50) {
+        nextSlide();
+      } else if (endX - startX > 50) {
+        prevSlide();
+      }
+    });
+
+    document.addEventListener('contextmenu', event => event.preventDefault());
+    
+    // Initial setup
+    window.onload = function() {
+      if (slides.length > 0) {
+        showSlide(currentSlide);
+      }
+      resetInactivityTimer();
+    };
+  </script>
+</body>
+</html>
