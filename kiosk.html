@@ -125,3 +125,260 @@
       margin-top: 10px;
       display: flex;
       gap: 1rem;
+    }
+
+    .ready-btn {
+      position: absolute;
+      bottom: 150px;
+      z-index: 10;
+      width: 100%;
+      text-align: center;
+    }
+
+    @media print {
+      .controls, .ready-btn, #sig-container {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body role="presentation" aria-hidden="true">
+  <div id="slides"></div>
+
+  <div class="controls" id="nav-controls">
+    <button class="button" id="backBtn" onclick="prevSlide()" tabindex="-1">Back</button>
+    <button class="button" onclick="nextSlide()" tabindex="-1">Next</button>
+  </div>
+
+  <div class="ready-btn" id="ready-btn" style="display:none;">
+    <button class="button" onclick="showSignaturePad()" tabindex="-1">Ready to Sign</button>
+  </div>
+
+  <div id="sig-container">
+    <canvas id="sig" width="900" height="250"></canvas>
+    <div class="sig-controls">
+      <button class="button" onclick="clearSig()" tabindex="-1">Clear Signature</button>
+      <button class="button" onclick="confirmSignature()" tabindex="-1">Confirm Signature</button>
+    </div>
+  </div>
+
+  <script>
+    let currentSlide = 0;
+    let signatureConfirmed = false;
+    let inactivityTimer;
+
+    const slidesContainer = document.getElementById('slides');
+    // Corrected image URLs to use relative paths for GitHub Pages
+    const imageFiles = [
+      'img/page1.PNG',
+      'img/page2.PNG',
+      'img/page3.PNG'
+    ];
+
+    imageFiles.forEach((src, index) => {
+      const div = document.createElement('div');
+      div.className = 'slide fade-in';
+      const img = document.createElement('img');
+      img.src = src;
+      img.id = `img${index}`;
+      div.appendChild(img);
+      slidesContainer.appendChild(div);
+    });
+
+    const slides = document.querySelectorAll('.slide');
+    slides[0].classList.add('active');
+
+    function showSlide(index) {
+      slides.forEach((slide, i) => {
+        slide.classList.remove('active');
+        slide.style.left = (i < index ? '-100vw' : '100vw');
+      });
+      slides[index].classList.add('active');
+      slides[index].style.left = '0';
+
+      document.getElementById('nav-controls').style.display = 'flex';
+      document.getElementById('backBtn').style.display = (index === 0 ? 'none' : 'inline-block');
+
+      if (index === slides.length - 1 && !signatureConfirmed) {
+        document.getElementById('ready-btn').style.display = 'block';
+        document.getElementById('sig-container').style.display = 'none';
+        document.getElementById('nav-controls').style.display = 'none';
+      } else {
+        document.getElementById('ready-btn').style.display = 'none';
+        document.getElementById('sig-container').style.display = 'none';
+      }
+
+      if (index === slides.length - 1 && signatureConfirmed) {
+        embedSignature();
+      }
+    }
+
+    function nextSlide() {
+      resetInactivityTimer();
+      if (currentSlide < slides.length - 1) {
+        currentSlide++;
+        showSlide(currentSlide);
+      }
+    }
+
+    function prevSlide() {
+      resetInactivityTimer();
+      if (currentSlide > 0) {
+        currentSlide--;
+        showSlide(currentSlide);
+      }
+    }
+
+    function showSignaturePad() {
+      resetInactivityTimer();
+      document.getElementById('ready-btn').style.display = 'none';
+      document.getElementById('sig-container').style.display = 'flex';
+    }
+
+    const canvas = document.getElementById('sig');
+    const ctx = canvas.getContext('2d');
+    let drawing = false;
+    let points = [];
+
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#000';
+
+    function getRelativePosition(e) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (e.clientX - rect.left) * (canvas.width / rect.width),
+        y: (e.clientY - rect.top) * (canvas.height / rect.height)
+      };
+    }
+
+    canvas.addEventListener('pointerdown', e => {
+      resetInactivityTimer();
+      drawing = true;
+      const pos = getRelativePosition(e);
+      points = [pos];
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+    });
+
+    canvas.addEventListener('pointermove', e => {
+      if (!drawing) return;
+      const pos = getRelativePosition(e);
+      points.push(pos);
+      const last = points.length - 1;
+      if (last >= 1) {
+        const midPoint = {
+          x: (points[last - 1].x + points[last].x) / 2,
+          y: (points[last - 1].y + points[last].y) / 2
+        };
+        ctx.quadraticCurveTo(points[last - 1].x, points[last - 1].y, midPoint.x, midPoint.y);
+        ctx.stroke();
+      }
+    });
+
+    canvas.addEventListener('pointerup', () => {
+      drawing = false;
+    });
+
+    function clearSig() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function confirmSignature() {
+      signatureConfirmed = true;
+      document.getElementById('sig-container').style.display = 'none';
+      embedSignature();
+    }
+
+    function embedSignature() {
+      const existingSig = slides[2].querySelector('.sig-overlay');
+      if (existingSig) existingSig.remove();
+
+      const sigData = canvas.toDataURL('image/png');
+      const pageImg = document.getElementById('img2');
+
+      if (pageImg && sigData) {
+        const sigOverlay = document.createElement('img');
+        sigOverlay.className = 'sig-overlay';
+        sigOverlay.src = sigData;
+        sigOverlay.style.position = 'absolute';
+        sigOverlay.style.bottom = '60px';
+        sigOverlay.style.left = '50%';
+        sigOverlay.style.transform = 'translateX(-50%)';
+        sigOverlay.style.width = '40%';
+        sigOverlay.style.height = 'auto';
+        sigOverlay.style.pointerEvents = 'none';
+        sigOverlay.style.zIndex = 2;
+        slides[2].appendChild(sigOverlay);
+
+        setTimeout(() => window.print(), 1000);
+        setTimeout(() => secureSessionReset(), 5000);
+      }
+    }
+
+    function secureSessionReset() {
+      currentSlide = 0;
+      signatureConfirmed = false;
+      clearSig();
+      showSlide(currentSlide);
+      document.getElementById('sig-container').style.display = 'none';
+      document.getElementById('ready-btn').style.display = 'none';
+      document.getElementById('nav-controls').style.display = 'flex';
+      const sigOverlay = document.querySelector('.sig-overlay');
+      if (sigOverlay) sigOverlay.remove();
+    }
+
+    function resetInactivityTimer() {
+      clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(() => {
+        secureSessionReset();
+      }, 60000);
+    }
+
+    document.body.addEventListener('pointerdown', resetInactivityTimer);
+    document.body.addEventListener('pointermove', resetInactivityTimer);
+    
+    document.body.addEventListener('keydown', (e) => {
+      resetInactivityTimer();
+
+      if (['F5', 'F11'].includes(e.key) || (e.ctrlKey && ['r', 'p'].includes(e.key))) {
+        e.preventDefault();
+      }
+    });
+
+    let startX = 0;
+    let swipeBlocked = false;
+
+    document.body.addEventListener('touchstart', e => {
+      if (e.target.closest('#sig')) {
+        swipeBlocked = true;
+        return;
+      }
+      swipeBlocked = false;
+      startX = e.changedTouches[0].screenX;
+    }, { passive: true } );
+
+    document.body.addEventListener('touchmove', e => {
+      if (e.target.closest('#sig')) {
+        swipeBlocked = true;
+      }
+    }, { passive: true } );
+
+    document.body.addEventListener('touchend', e => {
+      if (swipeBlocked) return;
+      const endX = e.changedTouches[0].screenX;
+      if (startX - endX > 50) {
+        nextSlide();
+      } else if (endX - startX > 50) {
+        prevSlide();
+      }
+    });
+
+    document.addEventListener('contextmenu', event => event.preventDefault());
+
+    showSlide(currentSlide);
+    resetInactivityTimer();
+  </script>
+</body>
+</html>
