@@ -12,7 +12,7 @@
       overflow: hidden;
       font-family: 'Segoe UI', sans-serif;
       background: linear-gradient(to bottom, #ffffff, #e0e0e0);
-      touch-action: pan-y; /* HIGHLIGHTED CHANGE: Disables pinch-zoom but allows touch events for swiping. */
+      touch-action: pan-y;
       user-select: none;
       -webkit-user-select: none;
       -ms-user-select: none;
@@ -24,7 +24,7 @@
       -webkit-user-select: none;
       -ms-user-select: none;
       -webkit-touch-callout: none;
-      touch-action: pan-y; /* HIGHLIGHTED CHANGE: Aligned with body to disable zoom globally. */
+      touch-action: pan-y;
     }
 
     body {
@@ -94,8 +94,6 @@
       -webkit-user-select: none;
       -ms-user-select: none;
       -webkit-touch-callout: none;
-      /* HIGHLIGHTED CHANGE: The following line was removed as it's now handled by the global '*' style. */
-      /* touch-action: none; */
     }
 
     .button:hover {
@@ -120,7 +118,6 @@
       border: 2px solid #444;
       border-radius: 8px;
       background: white;
-      /* This 'touch-action: none' is intentionally kept to allow for free drawing on the canvas. */
       touch-action: none;
     }
 
@@ -154,4 +151,85 @@
   </div>
 
   <div class="ready-btn" id="ready-btn" style="display:none;">
-    <button class="button"
+    <button class="button" onclick="showSignaturePad()" tabindex="-1">Ready to Sign</button>
+  </div>
+
+  <div id="sig-container">
+    <canvas id="sig" width="900" height="250"></canvas>
+    <div class="sig-controls">
+      <button class="button" onclick="clearSig()" tabindex="-1">Clear Signature</button>
+      <button class="button" onclick="confirmSignature()" tabindex="-1">Confirm Signature</button>
+    </div>
+  </div>
+
+  <script>
+    let currentSlide = 0;
+    let signatureConfirmed = false;
+    let inactivityTimer;
+
+    const slidesContainer = document.getElementById('slides');
+    // Corrected image URLs using the raw.githubusercontent.com domain
+    const imageFiles = [
+      'https://raw.githubusercontent.com/minorfall36/html/d2020c0d1b55440be87b6ed30662af82cc702082/img/page1.PNG',
+      'https://raw.githubusercontent.com/minorfall36/html/d2020c0d1b55440be87b6ed30662af82cc702082/img/page2.PNG',
+      'https://raw.githubusercontent.com/minorfall36/html/d2020c0d1b55440be87b6ed30662af82cc702082/img/page3.PNG'
+    ];
+
+    imageFiles.forEach((src, index) => {
+      const div = document.createElement('div');
+      div.className = 'slide fade-in';
+      const img = document.createElement('img');
+      img.src = src;
+      img.id = `img${index}`;
+      div.appendChild(img);
+      slidesContainer.appendChild(div);
+    });
+
+    const slides = document.querySelectorAll('.slide');
+    slides[0].classList.add('active');
+
+    function showSlide(index) {
+      slides.forEach((slide, i) => {
+        slide.classList.remove('active');
+        slide.style.left = (i < index ? '-100vw' : '100vw');
+      });
+      slides[index].classList.add('active');
+      slides[index].style.left = '0';
+
+      document.getElementById('nav-controls').style.display = 'flex';
+      document.getElementById('backBtn').style.display = (index === 0 ? 'none' : 'inline-block');
+
+      if (index === slides.length - 1 && !signatureConfirmed) {
+        document.getElementById('ready-btn').style.display = 'block';
+        document.getElementById('sig-container').style.display = 'none';
+        document.getElementById('nav-controls').style.display = 'none';
+      } else {
+        document.getElementById('ready-btn').style.display = 'none';
+        document.getElementById('sig-container').style.display = 'none';
+      }
+
+      if (index === slides.length - 1 && signatureConfirmed) {
+        embedSignature();
+      }
+    }
+
+    function nextSlide() {
+      resetInactivityTimer();
+      if (currentSlide < slides.length - 1) {
+        currentSlide++;
+        showSlide(currentSlide);
+      }
+    }
+
+    function prevSlide() {
+      resetInactivityTimer();
+      if (currentSlide > 0) {
+        currentSlide--;
+        showSlide(currentSlide);
+      }
+    }
+
+    function showSignaturePad() {
+      resetInactivityTimer();
+      document.getElementById('ready-btn').style.display = 'none';
+      document.getElementById('sig-container').style.display =
